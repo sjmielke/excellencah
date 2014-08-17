@@ -1,6 +1,18 @@
 import Text.Parsec
 import Text.Parsec.String
 import Control.Applicative ((<*), (*>))
+import Data.List (transpose)
+
+type Question = String
+type Answer = String
+
+parseCAHCSV :: String -> Either ParseError ([Question], [Answer])
+parseCAHCSV = fmap ( interpretData
+                   . map (filter $ not . null)
+                   . transpose)
+            . parse csvParser "Raw question/answer CSV"
+    where interpretData [answers, questions] = (questions, answers)
+          interpretData _ = error "CSV seems to have contained not exactly two columns!"
 
 csvParser :: GenParser Char () [[String]]
 csvParser = line `sepBy` eol
@@ -15,6 +27,4 @@ csvParser = line `sepBy` eol
               <|> try (string "\n\r")
 
 main = do csv <- readFile "ex.csv"
-          print $ mapRight (filter $ not . null . head) $ parse csvParser "Example" csv
-    where mapRight f x@(Left _) = x
-          mapRight f x@(Right a) = (Right $ f a)
+          print $ parseCAHCSV csv
