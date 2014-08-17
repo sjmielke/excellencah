@@ -1,10 +1,15 @@
 import Text.Parsec
 import Text.Parsec.String
 import Control.Applicative ((<*), (*>))
-import Data.List (transpose)
+import Control.Arrow (first)
+import Data.List (transpose, sort, group)
+import qualified Data.Text as T (pack, count)
 
 type Question = String
 type Answer = String
+
+onlySingleQuestions :: [Question] -> [Question]
+onlySingleQuestions = filter ((==1) . T.count (T.pack "_____") . T.pack)
 
 parseCAHCSV :: String -> ([Question], [Answer])
 parseCAHCSV = either (error . show) (interpretData
@@ -28,3 +33,4 @@ csvParser = line `sepBy` eol
 
 main = do csv <- readFile "ex.csv"
           print $ parseCAHCSV csv
+          print $ first onlySingleQuestions $ parseCAHCSV csv
