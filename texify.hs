@@ -6,10 +6,10 @@ import Data.List (transpose)
 type Question = String
 type Answer = String
 
-parseCAHCSV :: String -> Either ParseError ([Question], [Answer])
-parseCAHCSV = fmap ( interpretData
-                   . map (filter $ not . null)
-                   . transpose)
+parseCAHCSV :: String -> ([Question], [Answer])
+parseCAHCSV = either (error . show) (interpretData
+                                    . map (filter $ not . null)
+                                    . transpose)
             . parse csvParser "Raw question/answer CSV"
     where interpretData [answers, questions] = (questions, answers)
           interpretData _ = error "CSV seems to have contained not exactly two columns!"
