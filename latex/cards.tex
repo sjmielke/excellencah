@@ -1,0 +1,55 @@
+\documentclass[10pt,letterpaper]{article} % Note: the resulting PDF has the same dimensions as the original pdf!
+\usepackage[utf8]{inputenc}
+\usepackage[letterpaper]{geometry}
+\usepackage[scaled]{helvet} % Is not Helvetica. Is potat... Nimbus Sans.
+\usepackage{ifthen}
+\usepackage{intcalc}
+\usepackage{pagecolor}
+\usepackage{graphicx}
+
+\newcommand{\littleimage}{}
+\newcounter{onlyfour}
+\newcommand{\cahcard}[1]{%
+	\fbox{%
+		\parbox[c][4.82cm]{4.82cm}{%
+			\center\vspace*{-0.3cm}%
+			\parbox[t][4cm]{4cm}{%
+				\raggedright%
+				#1\\\vfill\fontsize{.23cm}{0}\selectfont \raisebox{-.05cm}{%
+					\littleimage%
+				} 42's Cards Against Humanity%
+			}%
+		}%
+	}%
+	\ifthenelse{\intcalcMod{\theonlyfour}{4} = 3}{\\}{}%
+	\stepcounter{onlyfour}%
+}
+
+\renewcommand{\familydefault}{\sfdefault}
+\pagestyle{empty}
+\topmargin-1.0in
+\textheight\paperheight
+\textwidth\paperwidth
+%\oddsidemargin-1in wäre exakt (I have no idea what past me means here.)
+\oddsidemargin-0.74in
+\parindent0mm
+\lineskip0mm
+
+\begin{document}
+
+\bfseries
+
+\pagecolor{black!30}
+\color{black!100}
+
+\renewcommand{\littleimage}{\includegraphics[width=.28cm]{littleimage.pdf}}%
+\input{questions.tex}%
+\newpage
+\setcounter{onlyfour}{0}
+
+\pagecolor{white!100}
+\color{black!100}
+\renewcommand{\littleimage}{\includegraphics[width=.28cm]{littleimage.pdf}}%
+\input{answers.tex}
+
+\end{document}
