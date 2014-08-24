@@ -1,5 +1,6 @@
 import Text.Parsec
 import Text.Parsec.String
+import Text.Read (readMaybe)
 import Control.Applicative ((<*), (*>))
 import Control.Arrow (first)
 import Control.Monad (when)
@@ -12,12 +13,14 @@ import System.Process (system)
 type Question = String
 type Answer = String
 
-onlySingleQuestions :: [Question] -> [Question]
-onlySingleQuestions = filter ((==1) . T.count (T.pack "_____") . T.pack)
+onlySingleQuestions :: Int -> [Question] -> [Question]
+onlySingleQuestions noOfUnderscores = filter ( (==1)
+                                             . T.count (T.pack $ replicate noOfUnderscores '_')
+                                             . T.pack)
 
-getListAsTex :: [String] -> String
-getListAsTex = concat . map (\s -> "\\cahcard{" ++ latexrep s ++ "}%\n")
-    where latexrep = replace "_____" "\\underline{\\hspace{1cm}}"
+getListAsTex :: Int -> [String] -> String
+getListAsTex noOfUnderscores = concat . map (\s -> "\\cahcard{" ++ latexrep s ++ "}%\n")
+    where latexrep = replace (replicate noOfUnderscores '_') "\\underline{\\hspace{1cm}}"
                    . replace "%" "\\%"
                    . replace "&" "\\&"
                    . replace "$" "\\$"
@@ -47,11 +50,15 @@ csvParser = line `sepBy` eol
               <|> try (string "\n\r")
 
 main = do args <- getArgs
-          when (length args /= 1) $ error "Please pass one parameter with the filename of the CSV containing questions and answers."
-          csv <- readFile $ head args
+          when (length args /= 2) $ error "Please pass one parameter with the filename of the CSV containing questions and answers and one with the number of underscores that will denote a blank."
+          let [csvFilename, noOfUnderscoresParam] = args
+              noOfUnderscores = case (readMaybe noOfUnderscoresParam) :: Maybe Int of
+                                    Just n  -> n
+                                    Nothing -> error "The second parameter (number of underscores that denote a blank) was not a number!"
+          csv <- readFile csvFilename
           let (questions, answers) = parseCAHCSV csv
-          writeFile "latex/questions.tex" $ getListAsTex . onlySingleQuestions $ questions
-          writeFile "latex/answers.tex" $ getListAsTex $ answers
+          writeFile "latex/questions.tex" $ getListAsTex noOfUnderscores . onlySingleQuestions noOfUnderscores $ questions
+          writeFile "latex/answers.tex" $ getListAsTex noOfUnderscores $ answers
           putStrLn "Now pdflatex has to be called:"
           putStrLn "cd latex && pdflatex cards.tex"
           putStrLn "This program will try to do this itself... which might fail on your system."
