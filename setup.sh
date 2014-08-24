@@ -96,6 +96,8 @@ Zm8gNiAwIFIKPj4Kc3RhcnR4cmVmCjQyOTQKJSVFT0YK) >littleimage.pdf
 cd ..
 
 # Lets see if it works:
-runhaskell texify.hs data/data.csv 5
+cabal install parsec
+cabal install argparser
+runhaskell texify.hs csv data/data.csv 5
 # That should automatically run pdflatex.
 # Now that I write these lines it seems like a silly idea.

@@ -3,11 +3,11 @@ import Text.Parsec.String
 import Text.Read (readMaybe)
 import Control.Applicative ((<*), (*>))
 import Control.Arrow (first)
-import Control.Monad (when)
+import Control.Monad (when, liftM, liftM2)
 import Data.List (transpose, sort, group, intercalate)
 import Data.List.Split (splitOn)
 import qualified Data.Text as T (pack, count)
-import System.Environment (getArgs)
+import System.Console.ArgParser
 import System.Process (system)
 
 type Question = String
@@ -49,17 +49,40 @@ csvParser = line `sepBy` eol
               <|> try (string "\r\n")
               <|> try (string "\n\r")
 
-main = do args <- getArgs
-          when (length args /= 2) $ error "Please pass one parameter with the filename of the CSV containing questions and answers and one with the number of underscores that will denote a blank."
-          let [csvFilename, noOfUnderscoresParam] = args
-              noOfUnderscores = case (readMaybe noOfUnderscoresParam) :: Maybe Int of
-                                    Just n  -> n
-                                    Nothing -> error "The second parameter (number of underscores that denote a blank) was not a number!"
-          csv <- readFile csvFilename
-          let (questions, answers) = parseCAHCSV csv
-          writeFile "latex/questions.tex" $ getListAsTex noOfUnderscores . onlySingleQuestions noOfUnderscores $ questions
-          writeFile "latex/answers.tex" $ getListAsTex noOfUnderscores $ answers
-          putStrLn "Now pdflatex has to be called:"
-          putStrLn "cd latex && pdflatex cards.tex"
-          putStrLn "This program will try to do this itself... which might fail on your system."
-          system "cd latex && pdflatex cards.tex"
+data CLIFlags = CSVCards { csvFilename :: FilePath
+                         , noOfUnderscores :: Int
+                         }
+              | TXTCards { questionsFilename :: FilePath
+                         , answersFilename :: FilePath
+                         , noOfUnderscores :: Int
+                         }
+              deriving Show
+
+main = mkSubParser [("csv", csv), ("txt", txt)] >>= flip runApp runWithFlags
+    where
+        csv = mkDefaultApp (CSVCards `parsedBy` reqPos "csvFilename" `Descr` "File name of the CSV containing questions and answers in two columns"
+                                     `andBy` reqPos "noOfUnderscores" `Descr` "Number of underscores denoting a blank"
+                           )
+                           "csv"
+              `setAppDescr` "Parse from a CSV containing questions and answers in two columns"
+        txt = mkDefaultApp (TXTCards `parsedBy` reqPos "questionsFilename" `Descr` "File name of the text file containing questions"
+                                     `andBy` reqPos "answersFilename" `Descr` "File name of the text file containing answers"
+                                     `andBy` reqPos "noOfUnderscores" `Descr` "Number of underscores denoting a blank"
+                           )
+                           "txt"
+              `setAppDescr` "Parse from two TXT files containing questions and answers"
+        runWithFlags myFlags = do
+            (questions, answers) <- case myFlags of
+                                        (CSVCards _ _)   -> liftM parseCAHCSV
+                                                            (readFile $ csvFilename myFlags)
+                                        (TXTCards _ _ _) -> liftM2 (,)
+                                                            (liftM (filter (not . null) $ lines) $ readFile $ questionsFilename myFlags)
+                                                            (liftM (filter (not . null) $ lines) $ readFile $ answersFilename myFlags)
+            let nou = noOfUnderscores myFlags
+            writeFile "latex/questions.tex" $ getListAsTex nou . onlySingleQuestions nou $ questions
+            writeFile "latex/answers.tex" $ getListAsTex nou $ answers
+            putStrLn "Now pdflatex has to be called:"
+            putStrLn "cd latex && pdflatex cards.tex"
+            putStrLn "This program will try to do this itself... which might fail on your system."
+            system "cd latex && pdflatex cards.tex"
+            return ()
